@@ -1,0 +1,159 @@
+﻿AppType=JavaFX
+Build1=Default,b4j.example
+File1=f0.png
+File10=sea2.png
+File11=stone0.png
+File12=stone1.png
+File13=stone2.png
+File2=f1.png
+File3=f2.png
+File4=f3.png
+File5=f4.png
+File6=f5.png
+File7=f6.png
+File8=f7.png
+File9=fishingnet.png
+FileGroup1=Default Group
+FileGroup10=Default Group
+FileGroup11=Default Group
+FileGroup12=Default Group
+FileGroup13=Default Group
+FileGroup2=Default Group
+FileGroup3=Default Group
+FileGroup4=Default Group
+FileGroup5=Default Group
+FileGroup6=Default Group
+FileGroup7=Default Group
+FileGroup8=Default Group
+FileGroup9=Default Group
+Group=Default Group
+Library1=jcore
+Library2=jfx
+Library3=jxui
+Module1=dna
+Module2=fish
+Module3=population
+Module4=stone
+Module5=vector
+Module6=vectorJS
+NumberOfFiles=13
+NumberOfLibraries=3
+NumberOfModules=6
+Version=9.8
+@EndOfDesignText@
+#Region Project Attributes 
+	#MainFormWidth: 400
+	#MainFormHeight: 600 
+#End Region
+
+Sub Process_Globals
+	Public cnv As B4XCanvas
+	Public lifespan = 400 ,count, fishesCatched, generation, hittarget As Int 
+	Public maxForce = 0.2, vpW, vpH, targetRadius = 16, stoneRadius = 8 As Float 
+	Public target As B4XRect
+	Public noStones As Boolean = False 'TEST
+	Public fishingNet, water, fishBmps(8) As B4XBitmap
+	Private MainForm As Form
+	Private xui As XUI  
+	Private timer As Timer
+	Private myPopulation As population
+	Private successRate,paralexXPos As Float
+	Private interval = 16, frames As Int 
+End Sub
+
+Sub AppStart (Form1 As Form, Args() As String)
+	MainForm = Form1 
+	MainForm.Show
+	MainForm.Title = "Robofish - B4J"
+	MainForm.Resizable = False
+	generation = 1
+	hittarget = 0
+	successRate = 0
+	fishesCatched = 0
+	vpW = MainForm.RootPane.Width
+	vpH = MainForm.RootPane.Height
+	cnv.Initialize(MainForm.RootPane)
+	'set net rect
+	target.Initialize(vpW*0.25,vpH*0.075,vpW*0.75,vpH*0.125)
+	initImages
+	myPopulation.Initialize
+	timer.Initialize("timer",interval)
+	timer.Enabled = True
+End Sub
+
+Private Sub initImages
+	fishingNet = xui.LoadBitmap(File.DirAssets,"fishingnet.png")
+	water = xui.LoadBitmap(File.DirAssets,"sea2.png")
+	For i = 0 To fishBmps.Length-1
+		fishBmps(i) = xui.LoadBitmap(File.DirAssets,$"f${i}.png"$)
+	Next
+End Sub
+
+Private Sub timer_Tick
+	frames = frames + 1
+	If frames Mod 4 = 0 Then paralexXPos = (paralexXPos + 1) Mod vpW
+	cnv.DrawRect(cnv.TargetRect,xui.Color_ARGB(255,24,190,190),True,0)
+	cnv.DrawBitmap(fishingNet,target)
+	cnv.DrawRect(target,xui.Color_ARGB(150,91,91,91),False,2)
+	myPopulation.run
+	count = count + 1
+	If count = lifespan Then resetScene
+	drawstats
+	cnv.DrawBitmap(water,vectorJS.getRect(0-paralexXPos,0,vpW,vpH))
+	cnv.DrawBitmap(water,vectorJS.getRect(vpW-paralexXPos,0,vpW,vpH))
+	cnv.Invalidate
+End Sub
+
+Private Sub resetScene
+	successRate = (hittarget / myPopulation.popSize) * 100
+	count = 0
+	hittarget = 0
+	fishesCatched = 0
+	generation = generation + 1
+	myPopulation.evaluate
+	myPopulation.selection
+End Sub
+ 
+Private Sub MainForm_Touch (Action As Int, X As Float, Y As Float)
+	Select Action
+		Case 0 'down
+			If x > vpW*0.865 And x < vpW*0.985 Then 
+				If y > vpH*0.04 And y < vpH*0.085 Then 'fast
+					interval = 1
+					timer.Interval = interval
+				else if y > vpH*0.1 And y < vpH*0.145 Then 'slow
+					interval = 16
+					timer.Interval = interval
+				End If
+			End If	
+			If x > vpW*0.025 And x < vpW*0.145 Then 
+				If y > vpH*0.04 And y < vpH*0.085 Then 
+					timer.Enabled = False
+					count = 0
+					interval = 16
+					generation = 1
+					hittarget = 0
+					successRate = 0 
+					myPopulation.Initialize
+					timer.Enabled = True
+				End If
+			End If
+	End Select
+End Sub
+
+Private Sub drawstats
+	cnv.DrawRect(vectorJS.getRect(vpW*0.865,vpH*0.04,vpW*0.12,vpH*0.045),IIf(interval=16,xui.Color_ARGB(100,255,255,255),xui.Color_ARGB(255,255,255,255)),True,0)
+	cnv.DrawRect(vectorJS.getRect(vpW*0.8675,vpH*0.0425,vpW*0.115,vpH*0.04),xui.Color_Black,True,0)
+	cnv.DrawText("Fast",vpW*0.925,vpH*0.07,xui.CreateDefaultFont(14),IIf(interval=16,xui.Color_ARGB(100,255,255,255),xui.Color_ARGB(255,255,255,255)),"CENTER")
+	cnv.DrawRect(vectorJS.getRect(vpW*0.865,vpH*0.1,vpW*0.12,vpH*0.045),IIf(interval=1,xui.Color_ARGB(100,255,255,255),xui.Color_ARGB(255,255,255,255)),True,0)
+	cnv.DrawRect(vectorJS.getRect(vpW*0.8675,vpH*0.1025,vpW*0.115,vpH*0.04),xui.Color_Black,True,0)
+	cnv.DrawText("Slow",vpW*0.925,vpH*0.13,xui.CreateDefaultFont(14),IIf(interval=1,xui.Color_ARGB(100,255,255,255),xui.Color_ARGB(255,255,255,255)),"CENTER")	
+	cnv.DrawRect(vectorJS.getRect(vpW*0.025,vpH*0.04,vpW*0.12,vpH*0.045),xui.Color_ARGB(255,255,255,255),True,0)
+	cnv.DrawRect(vectorJS.getRect(vpW*0.0275,vpH*0.0425,vpW*0.115,vpH*0.04),xui.Color_Black,True,0)
+	cnv.DrawText("Reset",vpW*0.085,vpH*0.07,xui.CreateDefaultFont(12),xui.Color_ARGB(255,255,255,255),"CENTER")
+	cnv.DrawText(fishesCatched,vpW*0.265,vpH*0.0625,xui.CreateDefaultBoldFont(12),xui.Color_White,"CENTER")
+	cnv.DrawText("Generation: " & generation, vpW*0.025, vpH*0.95,xui.CreateDefaultBoldFont(12),xui.Color_White,"LEFT")
+	cnv.DrawText("Success Rate: " & NumberFormat2(successRate,1,2,0,False) & "%", vpW*0.025, vpH*0.98,xui.CreateDefaultBoldFont(12),xui.Color_White,"LEFT")
+	cnv.DrawText("Lifespan: " & (lifespan-count),vpW*0.975, vpH*0.98,xui.CreateDefaultBoldFont(12),xui.Color_White,"RIGHT")
+End Sub
+ 
